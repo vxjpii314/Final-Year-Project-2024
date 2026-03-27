@@ -1,0 +1,112 @@
+## PLOTTING SOLUTION
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+import sympy as sp
+
+# Define the ODE system
+def density_matrix_odes(t, y, lam, omega_0, omega_L, sqrt_n1):
+rho_ee = y[0]
+rho_eg_re = y[1]
+rho_eg_im = y[2]
+rho_gg = y[3]
+rho_eg = rho_eg_re + 1j * rho_eg_im
+rho_ge = np.conj(rho_eg)
+drho_ee_dt = 1j * lam * (rho_ge - rho_eg) * sqrt_n1 - rho_ee*gamma
+drho_eg_dt = 1j * lam * sqrt_n1 * (rho_gg - rho_ee) + 1j * rho_eg * (omega_0 - omega_L) - 0.5*rho_eg*gamma
+drho_ge_dt = np.conj(drho_eg_dt)
+drho_gg_dt = 1j * lam * (rho_eg - rho_ge) * sqrt_n1 + rho_ee*gamma
+
+# Return derivatives as real and imaginary parts
+return [
+np.real(drho_ee_dt),
+np.real(drho_eg_dt),
+np.imag(drho_eg_dt),
+np.real(drho_gg_dt),
+]
+
+# Parameters
+lam = 0.3
+omega_0 = 2
+omega_L = 2
+n = 1
+gamma = 0.1
+sqrt_n1 = np.sqrt(n + 1)
+
+# Initial conditions
+rho_ee_0 = 1.0
+rho_gg_0 = 0.0
+rho_eg_re_0 = 0.0
+rho_eg_im_0 = 0.0
+
+initial_conditions = [rho_ee_0, rho_eg_re_0, rho_eg_im_0, rho_gg_0]
+
+# Time span for the integration
+t_span = (0, 25)
+t_eval = np.linspace(0, 25, 1000)
+
+# Solve the ODEs
+solution = solve_ivp(
+density_matrix_odes,
+t_span,
+initial_conditions,
+t_eval=t_eval,
+args=(lam, omega_0, omega_L, sqrt_n1),
+method='RK45'
+)
+
+# Extract solutions
+t_vals = solution.t
+rho_ee_vals = solution.y[0]
+rho_eg_re_vals = solution.y[1]
+rho_eg_im_vals = solution.y[2]
+rho_gg_vals = solution.y[3]
+rho_eg_vals = rho_eg_re_vals + 1j * rho_eg_im_vals
+
+# Plot the solutions
+plt.figure(figsize=(12, 8))
+plt.plot(t_vals, rho_ee_vals, label=r'$\rho_{ee}(t)$', color='blue')
+plt.plot(t_vals, np.abs(rho_eg_vals), label=r'$|\rho_{eg}(t)|$', color='red', linestyle='--')
+plt.plot(t_vals, rho_gg_vals, label=r'$\rho_{gg}(t)$', color='green')
+plt.plot(t_vals, rho_gg_vals + rho_ee_vals, label=r'$\rho_{gg}(t)$', color='violet')
+plt.title('Density Matrix Elements Over Time')
+plt.xlabel('Time (t)')
+plt.ylabel('Amplitude')
+plt.legend()
+plt.grid()
+plt.show()
+
+##########################################################################################################################################################
+
+# Symbolical Output (Mathematical solution)
+# Define symbolic variables
+t = sp.symbols('t', real=True, positive=True)
+omega_0, omega_L, lam, n, gamma = sp.symbols('omega_0 omega_L lambda n gamma', real=True, positive=True)
+sqrt_n1 = sp.sqrt(n + 1)
+
+# Define density matrix elements as functions of time
+rho_ee = sp.Function('rho_ee')(t)
+rho_eg = sp.Function('rho_eg')(t)
+rho_ge = sp.Function('rho_ge')(t)
+rho_gg = sp.Function('rho_gg')(t)
+
+# Define the ODEs
+drho_ee_dt = sp.Eq(sp.Derivative(rho_ee, t), 1j * lam * (rho_ge - rho_eg) * sqrt_n1 - rho_ee*gamma)
+drho_eg_dt = sp.Eq(sp.Derivative(rho_eg, t), 1j * lam * sqrt_n1 * (rho_gg - rho_ee) + 1j * rho_eg * (omega_0 - omega_L) - 0.5*rho_eg*gamma)
+drho_ge_dt = sp.Eq(sp.Derivative(rho_ge, t), 1j * lam * sqrt_n1 * (rho_ee - rho_gg) + 1j * rho_ge * (omega_L - omega_0) - 0.5*rho_ge*gamma)
+drho_gg_dt = sp.Eq(sp.Derivative(rho_gg, t), 1j * lam * (rho_eg - rho_ge) * sqrt_n1 + rho_ee*gamma)
+
+# Initial conditions
+initial_conditions = {
+rho_ee.subs(t, 0): 1.0,
+rho_eg.subs(t, 0): 0.0,
+rho_ge.subs(t, 0): 0.0,
+rho_gg.subs(t, 0): 0.0,
+}
+
+# Solve the system of ODEs symbolically
+solutions = sp.dsolve([drho_ee_dt, drho_eg_dt, drho_ge_dt, drho_gg_dt], ics=initial_conditions)
+# Display the solutions in mathematical form
+for sol in solutions:
+print(f"{sol.lhs} = {sp.simplify(sol.rhs)}")
