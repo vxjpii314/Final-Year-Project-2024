@@ -1,0 +1,33 @@
+# Atomic inversion
+n_max = 20
+weights = np.array([p_nn(n, n_bar) for n in range(n_max + 1)])
+
+inversion_vals = np.zeros_like(t_eval)
+
+for n in range(n_max + 1):
+    solution = solve_ivp(
+        coupled_odes,
+        t_span,
+        initial_conditions,
+        t_eval=t_eval,
+        args=(lam, omega_0, omega_L, kappa, m, n, n_bar),
+        method='RK45'
+    )
+
+    a_vals = solution.y[0]
+    d_vals = solution.y[5]
+
+    # ✅ IMPORTANT: use |.|^2
+    rho_ee_vals = np.abs(a_vals)**2
+    rho_gg_vals = np.abs(d_vals)**2
+
+    inversion_vals += weights[n] * (rho_ee_vals - rho_gg_vals)
+
+plt.figure(figsize=(10, 6))
+plt.plot(t_eval, inversion_vals, label=r'$W(t)$', color='purple')
+plt.title('Atomic Inversion (Jaynes-Cummings with Dissipation)')
+plt.xlabel('Time (t)')
+plt.ylabel('W(t)')
+plt.grid()
+plt.legend()
+plt.show()
