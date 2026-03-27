@@ -1,0 +1,62 @@
+import matplotlib.pyplot as plt
+import numpy as np
+from qutip import *
+
+# Parameters
+wc = 1.0 * 2 * np.pi
+wa = 1.0 * 2 * np.pi
+g = 0.05 * 2 * np.pi
+kappa = 0.005      # cavity decay
+gamma = 0.05       # atomic decay
+N = 15
+step = 1001
+
+# Operators
+vac = tensor(basis(N, 0), basis(2, 0))
+a = tensor(destroy(N), qeye(2))
+sm = tensor(qeye(N), destroy(2))
+
+# Hamiltonian (Jaynes-Cummings)
+H = wc * a.dag() * a + wa * sm.dag() * sm + g * (a.dag() * sm + a * sm.dag())
+
+# Collapse operators (Include gamma)
+c_ops = [
+    np.sqrt(kappa) * a,   # cavity loss
+    np.sqrt(gamma) * sm   # atomic spontaneous emission
+]
+
+# Time
+t_list = np.linspace(0, 25.0, step)
+
+# Initial state: |e,0>
+psi0 = sm.dag() * vac
+
+# Solve with dissipation
+result_diss = mesolve(H, psi0, t_list, c_ops, [a.dag()*a, sm.dag()*sm])
+
+# Solve without dissipation
+result_no = mesolve(H, psi0, t_list, [], [a.dag()*a, sm.dag()*sm])
+
+# Extract expectation values
+n_c_no = result_no.expect[0]
+n_a_no = result_no.expect[1]
+
+n_c_diss = result_diss.expect[0]
+n_a_diss = result_diss.expect[1]
+
+# Plot
+plt.figure(figsize=(10,6))
+
+plt.plot(t_list, n_c_no, label='Cavity (no dissipation)')
+plt.plot(t_list, n_a_no, label='Atom (no dissipation)')
+
+plt.plot(t_list, n_c_diss, '--', label='Cavity (with κ, γ)')
+plt.plot(t_list, n_a_diss, '--', label='Atom (with κ, γ)')
+
+plt.xlabel('Time')
+plt.ylabel('Occupation probability')
+plt.title('Vacuum Rabi Oscillations with Dissipation (κ and γ)')
+plt.legend()
+plt.grid()
+
+plt.show()
