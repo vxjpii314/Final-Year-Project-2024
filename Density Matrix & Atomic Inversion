@@ -1,0 +1,35 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameters
+lam = 0.5        # Coupling strength
+avg_photon_num = 2.0  # Average photon number (⟨n⟩)
+n_max = 50       # Maximum photon number to consider
+t_vals = np.linspace(0, 10, 400)  # Time range
+
+# Poisson distribution for coherent state
+def coherent_state_weights(avg_photon_num, n_max):
+    n_vals = np.arange(0, n_max + 1)
+    weights = (avg_photon_num**n_vals * np.exp(-avg_photon_num)) / np.math.factorial(n_vals)
+    return weights
+
+# Calculate atomic inversion
+def atomic_inversion(t_vals, lam, avg_photon_num, n_max):
+    weights = coherent_state_weights(avg_photon_num, n_max)
+    inversion = np.zeros_like(t_vals)
+    for n in range(n_max + 1):
+        inversion += weights[n] * np.cos(2 * lam * t_vals * np.sqrt(n + 1))
+    return inversion
+
+# Compute the atomic inversion
+inversion_vals = atomic_inversion(t_vals, lam, avg_photon_num, n_max)
+
+# Plot the atomic inversion
+plt.figure(figsize=(10, 6))
+plt.plot(t_vals, inversion_vals, label=r'$W(t)$ (Atomic Inversion)', color='purple')
+plt.title('Atomic Inversion with Coherent State of the Field')
+plt.xlabel('Time (t)')
+plt.ylabel('Inversion $W(t)$')
+plt.grid()
+plt.legend()
+plt.show()
