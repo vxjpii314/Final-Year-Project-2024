@@ -1,0 +1,96 @@
+import numpy as np
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+
+# Define the system of coupled ODEs
+def coupled_odes(t, y, g, gamma_eg, n, omega_0, omega_L):
+    # Unpack variables
+    rho_ee, rho_gg, rho_eg_real, rho_eg_imag, rho_ge_real, rho_ge_imag = y
+    rho_eg = rho_eg_real + 1j * rho_eg_imag
+    rho_ge = rho_ge_real + 1j * rho_ge_imag
+
+    # Define ODEs
+    drho_ee_dt = 1j * g * (rho_ge - rho_eg) * np.sqrt(n + 1) - rho_ee * gamma_eg
+    drho_gg_dt = rho_ee * gamma_eg - 1j * g * (rho_ge - rho_eg) * np.sqrt(n + 1)
+    drho_eg_dt = (1j * (omega_0 - omega_L) - gamma_eg / 2) * rho_eg + \
+                 1j * g * np.sqrt(n + 1) * (rho_gg - rho_ee)
+    drho_ge_dt = (-1j * (omega_0 - omega_L) + gamma_eg / 2) * rho_ge - \
+                 1j * g * np.sqrt(n + 1) * (rho_gg - rho_ee)
+
+    # Split real and imaginary parts for solver
+    return [
+        drho_ee_dt.real,  # Real part of rho_ee
+        drho_gg_dt.real,  # Real part of rho_gg
+        drho_eg_dt.real,  # Real part of rho_eg
+        drho_eg_dt.imag,  # Imaginary part of rho_eg
+        drho_ge_dt.real,  # Real part of rho_ge
+        drho_ge_dt.imag   # Imaginary part of rho_ge
+    ]
+
+# Parameters
+g = 1.0         # Coupling constant
+gamma_eg = 0.1  # Decay rate
+n = 10          # Photon number
+omega_0 = 1.0   # Atomic frequency
+omega_L = 1.0   # Laser frequency
+
+# Initial conditions: rho_ee = 1, others = 0
+y0 = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+# Time span
+t_span = (0, 20)
+t_eval = np.linspace(*t_span, 500)
+
+# Solve the ODE system
+solution = solve_ivp(
+    coupled_odes, t_span, y0, t_eval=t_eval,
+    args=(g, gamma_eg, n, omega_0, omega_L)
+)
+
+# Extract results
+t = solution.t
+rho_ee = solution.y[0]
+rho_gg = solution.y[1]
+rho_eg = solution.y[2] + 1j * solution.y[3]
+rho_ge = solution.y[4] + 1j * solution.y[5]
+
+# Compute rho_ee + rho_gg
+rho_sum = rho_ee + rho_gg
+
+# Plot the results
+fig, axs = plt.subplots(5, 1, figsize=(10, 15), sharex=True)
+
+# Plot rho_ee(t)
+axs[0].plot(t, rho_ee, label=r'$\rho_{ee}(t)$', color='blue')
+axs[0].set_ylabel(r'$\rho_{ee}(t)$')
+axs[0].legend()
+axs[0].grid()
+
+# Plot rho_gg(t)
+axs[1].plot(t, rho_gg, label=r'$\rho_{gg}(t)$', color='red')
+axs[1].set_ylabel(r'$\rho_{gg}(t)$')
+axs[1].legend()
+axs[1].grid()
+
+# Plot |rho_eg(t)|
+axs[2].plot(t, np.abs(rho_eg), label=r'$|\rho_{eg}(t)|$', color='green')
+axs[2].set_ylabel(r'$|\rho_{eg}(t)|$')
+axs[2].legend()
+axs[2].grid()
+
+# Plot |rho_ge(t)|
+axs[3].plot(t, np.abs(rho_ge), label=r'$|\rho_{ge}(t)|$', color='purple')
+axs[3].set_ylabel(r'$|\rho_{ge}(t)|$')
+axs[3].legend()
+axs[3].grid()
+
+# Plot rho_ee + rho_gg
+axs[4].plot(t, rho_sum, label=r'$\rho_{ee}(t) + \rho_{gg}(t)$', color='orange')
+axs[4].set_xlabel('Time')
+axs[4].set_ylabel(r'$\rho_{ee}(t) + \rho_{gg}(t)$')
+axs[4].legend()
+axs[4].grid()
+
+# Adjust layout and show
+plt.tight_layout()
+plt.show()
